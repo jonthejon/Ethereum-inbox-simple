@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "fs-extra": "^8.0.1",
     "solc": "^0.5.9"
   }
 }
