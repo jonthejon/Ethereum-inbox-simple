@@ -1,8 +1,7 @@
 const assert = require('assert');
 const ganache = require('ganache-cli');
 const Web3 = require('web3');
-const fs = require('fs');
-const path = require('path');
+const contracts = require('../read_compiled');
 
 const provider = ganache.provider()
 const OPTIONS = {
@@ -12,27 +11,21 @@ const OPTIONS = {
 };
 const web3 = new Web3(provider, null, OPTIONS);
 
-// reading JSON file contents
-let jsonOutputName = path.parse('Inbox').name + '.json';
-let jsonFile = './build/' + jsonOutputName;
-let contractJsonContent = fs.readFileSync(jsonFile, 'utf8');
-let jsonOutput = JSON.parse(contractJsonContent);
-
-// retrieving contract info
-let interface = jsonOutput['abi'];
-let bytecode = jsonOutput['evm']['bytecode']['object'];
+const interface = contracts.interface;
+const bytecode = contracts.bytecode;
 
 let accounts;
 let inbox;
+const INITIAL_MESSAGE = 'Jon was here.';
 
-beforeEach(async function () {
+beforeEach(async () => {
   // getting a list of all accounts
   accounts = await web3.eth.getAccounts();
 
   // deploy contract into ganache network
   inbox = await new web3.eth.Contract(interface).deploy({
     data: bytecode,
-    arguments: ['My String']
+    arguments: [INITIAL_MESSAGE]
   }).send({
     from: accounts[0],
     gas: 1500000,
@@ -43,6 +36,18 @@ beforeEach(async function () {
 
 describe('Inbox', () => {
   it('deploys a contract', () => {
-    console.log(inbox);
+    assert.ok(inbox.options.address);
+  });
+
+  it('has a default message', async () => {
+    const message = await inbox.methods.message().call();
+    assert.equal(message , INITIAL_MESSAGE);
+  });
+
+  it('can change the message', async function () {
+    this.timeout(5000);
+    await inbox.methods.setMessage('bye').send({ from: accounts[0] });
+    const message = await inbox.methods.message().call();
+    assert.equal(message , 'bye');
   });
 });
